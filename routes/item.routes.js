@@ -8,5 +8,9 @@ const upload = require('../middlewares/upload')
 // endpoint
 // upload.single : multer, untuk mengirimkan data 1 file dari input name image
 router.post('/', upload.single('image'), itemController.createItem)
+router.get('/', itemController.getItem);
+router.get('/:id', itemController.showItem);
+router.put('/:id', upload.single('image'), itemController.updateItem);
+router.delete('/:id', itemController.deleteItem);
 
 module.exports = router
