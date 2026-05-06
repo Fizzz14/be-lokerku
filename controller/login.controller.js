@@ -34,12 +34,12 @@ module.exports = {
             }
 
             // membuat token
-            const token = jwt.sign({ userId: user.id }, auth_secret, {
+            const token = jwt.sign({ userId: user.id, username: user.username, name: user.name }, auth_secret, {
                 expiresIn: '1h'
             });
             
             const data = {
-                user : {
+                data : {
                     name: user.name,
                     username: user.username
                 },

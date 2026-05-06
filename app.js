@@ -1,6 +1,6 @@
 const express = require('express')
 const app = express()
-const port = 3000
+const port = 5000
 
 // mencoba koneksi ke database serta menyambungkan model ke db
 const db = require('./models')
