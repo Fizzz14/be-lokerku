@@ -1,38 +1,87 @@
-const express = require('express')
-const app = express()
-const port = 5000
-
-// mencoba koneksi ke database serta menyambungkan model ke db
-const db = require('./models')
-const itemRoutes = require('./routes/item.routes')
-const loanRoutes = require('./routes/loan.routes')
-const returnRoutes = require('./routes/return.routes')
-const loginRoutes = require('./routes/login.routes')
-const { verifyToken } = require('./middlewares/auth')
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const db = require('./models');
 
 db.sequelize.authenticate()
-    .then(() => console.log("Database berhasil tersambung"))
-    .catch(err => console.error(err))
+  .then(() => console.log('Database berhasil tersambung'))
+  .catch((err) => console.error('Gagal tersambung ke database:', err));
 
-const methodOverride = require('method-override');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const locationRoutes = require('./routes/locationRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const cardRoutes = require('./routes/cardRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const publicRoutes = require('./routes/publicRoutes');
+const { notFound, errorMiddleware } = require('./middlewares/errorMiddleware');
 
-// kelompok app.use disimpan diatas dari app.get atau listen
-// app.use : memasang middleware atau menghubungkan route ke aplikasi
-// express.json() : middleware umum, untuk mengakses json body pada payload (postman/input)
-app.use(express.json())
-app.use(methodOverride('_method'))
-// membuat file yg tersimpan di folder uploads, bisa dimunculkan di browser nantinya
-app.use('/uploads', express.static('uploads'))
-// route path /items penangannnaya di itemroutes
-app.use('/items', verifyToken, itemRoutes)
-app.use('/loans', verifyToken, loanRoutes)
-app.use('/returns', verifyToken, returnRoutes)
-app.use('/login', loginRoutes)
+const app = express();
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+  res.json({ message: 'Lokerku API ready' });
+});
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+const { Region, LockerSize } = db;
+
+app.get('/api/regions', async (req, res, next) => {
+  try {
+    const rows = await Region.findAll({
+      where: { status: 'Aktif' },
+      order: [['name', 'ASC']],
+    });
+    res.json(rows.map((row) => ({ id: String(row.id), name: row.name, source: 'app.js' })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/sizes', async (req, res, next) => {
+  try {
+    const rows = await LockerSize.findAll({
+      where: { status: 'Aktif' },
+      order: [['pricePerDay', 'ASC']],
+    });
+    res.json(rows.map((row) => ({ id: String(row.id), name: row.name, pricePerDay: row.pricePerDay })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/locations', locationRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/cards', cardRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/public', publicRoutes);
+
+app.get('/api/ping', (req, res) => res.json({ message: 'pong', time: new Date() }));
+
+app.use(notFound);
+app.use(errorMiddleware);
+
+const PORT = process.env.PORT || 5001;
+
+app.listen(PORT, () => {
+  console.log(`Lokerku API running on http://localhost:${PORT}`);
+});
+
+module.exports = app;
